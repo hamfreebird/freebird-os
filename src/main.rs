@@ -7,6 +7,7 @@ extern crate alloc;
 
 use alloc::{boxed::Box, vec, vec::Vec, rc::Rc};
 use freebird_os::println;
+use freebird_os::task::{Task, simple_executor::SimpleExecutor, keyboard, executor::Executor};
 use core::panic::PanicInfo;
 use bootloader::{BootInfo, entry_point};
 use x86_64::VirtAddr;
@@ -47,11 +48,29 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
     core::mem::drop(reference_counted);
     println!("reference count is {} now", Rc::strong_count(&cloned_reference));
 
+    let mut executor = SimpleExecutor::new();
+    executor.spawn(Task::new(example_task()));
+    executor.run();
+
     #[cfg(test)]
     test_main();
 
+    let mut executor = Executor::new(); // new
+    executor.spawn(Task::new(example_task()));
+    executor.spawn(Task::new(keyboard::print_keypresses()));
+    executor.run();
+
     println!("It did not crash!");
     freebird_os::hlt_loop();
+}
+
+async fn async_number() -> u32 {
+    42
+}
+
+async fn example_task() {
+    let number = async_number().await;
+    println!("async number: {}", number);
 }
 
 /// This function is called on panic.
