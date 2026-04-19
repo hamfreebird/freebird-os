@@ -1,18 +1,10 @@
+use bootloader::bootinfo::{MemoryMap, MemoryRegionType};
+#[allow(unused_imports)]
 use x86_64::{
-    structures::paging::{Page,
-                         PhysFrame,
-                         Mapper,
-                         Size4KiB,
-                         FrameAllocator,
-                         OffsetPageTable,
-                         PageTable
+    PhysAddr, VirtAddr,
+    structures::paging::{
+        FrameAllocator, Mapper, OffsetPageTable, Page, PageTable, PhysFrame, Size4KiB,
     },
-    VirtAddr,
-    PhysAddr,
-};
-use bootloader::bootinfo::{
-    MemoryMap,
-    MemoryRegionType
 };
 
 /// 一个FrameAllocator，从bootloader的内存地图中返回可用的 frames。
@@ -37,11 +29,9 @@ impl BootInfoFrameAllocator {
     fn usable_frames(&self) -> impl Iterator<Item = PhysFrame> {
         // 从内存 map 中获取可用的区域
         let regions = self.memory_map.iter();
-        let usable_regions = regions
-            .filter(|r| r.region_type == MemoryRegionType::Usable);
+        let usable_regions = regions.filter(|r| r.region_type == MemoryRegionType::Usable);
         // 将每个区域映射到其地址范围
-        let addr_ranges = usable_regions
-            .map(|r| r.range.start_addr()..r.range.end_addr());
+        let addr_ranges = usable_regions.map(|r| r.range.start_addr()..r.range.end_addr());
         // 转化为一个帧起始地址的迭代器
         let frame_addresses = addr_ranges.flat_map(|r| r.step_by(4096));
         // 从起始地址创建 `PhysFrame`  类型
@@ -79,9 +69,7 @@ pub unsafe fn init(physical_memory_offset: VirtAddr) -> OffsetPageTable<'static>
 }
 
 /// 返回一个对活动的4级表的可变引用。
- unsafe fn active_level_4_table(physical_memory_offset: VirtAddr)
-                                   -> &'static mut PageTable
-{
+unsafe fn active_level_4_table(physical_memory_offset: VirtAddr) -> &'static mut PageTable {
     use x86_64::registers::control::Cr3;
 
     let (level_4_table_frame, _) = Cr3::read();

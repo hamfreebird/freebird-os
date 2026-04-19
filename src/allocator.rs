@@ -1,19 +1,21 @@
 pub mod bump;
-mod linked_list;
 mod fixed_size_block;
+mod linked_list;
 
-use x86_64::{
-    structures::paging::{
-        mapper::MapToError, FrameAllocator, Mapper, Page, PageTableFlags, Size4KiB,
-    },
-    VirtAddr,
-};
 use alloc::alloc::{GlobalAlloc, Layout};
 use core::ptr::null_mut;
+use x86_64::{
+    VirtAddr,
+    structures::paging::{
+        FrameAllocator, Mapper, Page, PageTableFlags, Size4KiB, mapper::MapToError,
+    },
+};
 // use linked_list_allocator::LockedHeap;
+#[allow(unused_imports)]
 use bump::BumpAllocator;
-use linked_list::LinkedListAllocator;
 use fixed_size_block::FixedSizeBlockAllocator;
+#[allow(unused_imports)]
+use linked_list::LinkedListAllocator;
 
 pub struct Dummy;
 pub const HEAP_START: usize = 0x_4444_4444_0000;
@@ -31,7 +33,7 @@ impl<A> Locked<A> {
         }
     }
 
-    pub fn lock(&self) -> spin::MutexGuard<A> {
+    pub fn lock(&self) -> spin::MutexGuard<'_, A> {
         self.inner.lock()
     }
 }
@@ -82,9 +84,7 @@ pub fn init_heap(
             .allocate_frame()
             .ok_or(MapToError::FrameAllocationFailed)?;
         let flags = PageTableFlags::PRESENT | PageTableFlags::WRITABLE;
-        unsafe {
-            mapper.map_to(page, frame, flags, frame_allocator)?.flush()
-        };
+        unsafe { mapper.map_to(page, frame, flags, frame_allocator)?.flush() };
     }
 
     unsafe {

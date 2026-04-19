@@ -1,0 +1,48 @@
+// src/process/switch_asm.rs
+// 上下文切换汇编实现
+
+use crate::process::ProcessContext;
+use core::arch::global_asm;
+
+// 使用全局汇编宏嵌入汇编代码
+global_asm!(
+    r#"
+    .global switch_context
+switch_context:
+    # 保存当前上下文（callee-saved寄存器）
+    push rbp
+    push rbx
+    push r12
+    push r13
+    push r14
+    push r15
+
+    # 保存当前栈指针到 current（rdi指向的位置）
+    mov [rdi], rsp
+
+    # 加载下一个栈指针
+    mov rsp, rsi
+
+    # 恢复下一个上下文
+    pop r15
+    pop r14
+    pop r13
+    pop r12
+    pop rbx
+    pop rbp
+
+    # 返回，此时会跳转到新进程的 rip
+    ret
+    "#
+);
+
+unsafe extern "C" {
+    /// 上下文切换函数
+    ///
+    /// # Safety
+    /// 调用者必须确保：
+    /// 1. `current` 指向有效的当前进程上下文指针
+    /// 2. `next` 指向有效的下一个进程上下文
+    /// 3. 调用后不会返回（除非发生错误）
+    pub fn switch_context(current: *mut *mut ProcessContext, next: *mut ProcessContext);
+}
